@@ -1,12 +1,30 @@
 import QrcodeSvg from '@src/assets/qrcode.svg?react';
+import { forwardRef } from 'preact/compat';
 import { useState } from 'preact/hooks';
 import { QRImage } from './QRImage';
 
-export default function QRModal({ text }: { text: string }) {
+interface QRModalProps {
+  text: string;
+}
+
+export interface QRModalRef {
+  openModal: () => void;
+  closeModal: () => void;
+}
+
+const QRModal = forwardRef<QRModalRef, QRModalProps>(({ text }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
+
+  if (ref) {
+    if (typeof ref === 'function') {
+      ref({ openModal, closeModal });
+    } else {
+      ref.current = { openModal, closeModal };
+    }
+  }
 
   return (
     <div>
@@ -37,4 +55,6 @@ export default function QRModal({ text }: { text: string }) {
       )}
     </div>
   );
-}
+});
+
+export default QRModal;

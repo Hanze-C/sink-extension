@@ -1,5 +1,5 @@
 import { useAvatar } from '@src/util/useAvatar';
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 import CopySvg from '@src/assets/copy.svg?react';
 import FlashSvg from '@src/assets/flash.svg?react';
@@ -13,7 +13,7 @@ import { DotLoading } from '@src/components/DotLoading';
 import { LoadingIcon } from '@src/components/LoadingIcon';
 import { FormError } from '@src/options/components/FormError';
 import { ILink } from '@src/util/atom';
-import QRModal from './QRModal';
+import QRModal, { QRModalRef } from './QRModal';
 
 export const NewShortURL = ({
   links,
@@ -39,10 +39,23 @@ export const NewShortURL = ({
   }>({});
   const isEdit = editLink?.slug === key;
   const avatarUrl = useAvatar(url);
+  const qrModalRef = useRef<QRModalRef>(null);
 
   const warning = links.filter(
     link => link.url === url && url !== editLink?.url
   );
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        qrModalRef.current?.openModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   useLayoutEffect(() => {
     setErrors({});
@@ -223,7 +236,7 @@ export const NewShortURL = ({
             alt='Quick generate slug'
           />
         )}
-        <QRModal text={url} />
+        <QRModal text={url} ref={qrModalRef} />
       </div>
       <div className='self-start'>
         {warning.length ? (
