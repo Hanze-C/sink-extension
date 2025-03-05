@@ -30,6 +30,7 @@ export const NewShortURL = ({
   const [url, setUrl] = useState('');
   const [key, setKey] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { instanceUrl } = useSettings();
   const [errors, setErrors] = useState<{
     key?: string;
@@ -82,7 +83,24 @@ export const NewShortURL = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleSubmit = async (e: Event) => {
+  const handleAutoGenerate = () => {
+    setIsLoadSlug(true);
+    request(`/api/link/ai?url=${url}`)
+      .then(data => {
+        if (data?.slug) {
+          setKey(data.slug);
+          setShowConfirmDialog(true);
+        }
+      })
+      .finally(() => setIsLoadSlug(false));
+  };
+
+  const handleConfirmSlug = () => {
+    setShowConfirmDialog(false);
+    handleSubmit();
+  };
+
+  const handleSubmit = async () => {
     if (validateForm()) {
       setIsLoging(true);
       const link = {
@@ -126,6 +144,35 @@ export const NewShortURL = ({
 
   return (
     <div className='flex w-full flex-col items-center justify-center'>
+      {showConfirmDialog && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50'>
+          <div className='rounded-lg bg-white p-4 text-base shadow-lg'>
+            <p style={{ marginBottom: '6px' }}>
+              Are you sure to create the short link?
+            </p>
+            <p style={{ marginBottom: '8px' }}>
+              <span style={{ fontWeight: 'bold', color: 'blue' }}>
+                {instanceUrl}/
+              </span>
+              <span style={{ fontWeight: 'bold', color: 'red', marginLeft: '2px' }}>{key}</span>
+            </p>
+            <div className='flex justify-end gap-2'>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className='px-3 py-1 text-gray-600 hover:text-gray-800'
+              >
+                No
+              </button>
+              <button
+                onClick={handleConfirmSlug}
+                className='rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600'
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className='flex w-full items-center justify-center'>
         <Svg
           src={avatarUrl}
@@ -134,7 +181,7 @@ export const NewShortURL = ({
         />
         <div className='flex-1'>
           <div className='flex items-center justify-start overflow-hidden'>
-            <div className='mr-[2px] truncate text-base font-bold leading-5 relative overflow-visible'>
+            <div className='relative mr-[2px] overflow-visible truncate text-base font-bold leading-5'>
               {`${instanceUrl}/`}
             </div>
             {isLoading && <DotLoading className='w-0 overflow-visible' />}
@@ -192,7 +239,7 @@ export const NewShortURL = ({
         className='mt-3 w-full'
         loading={isLoging}
         disabled={editLink?.slug === key && editLink.url === url}
-        onClick={e => handleSubmit(e)}
+        onClick={e => (key ? handleSubmit() : handleAutoGenerate())}
       >
         {isEdit ? 'Edit' : 'Add'}
       </Button>
