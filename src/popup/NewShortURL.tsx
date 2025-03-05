@@ -9,17 +9,20 @@ import { copyToClipboard, debounce, request } from '@src/util';
 import { useSettings } from '@src/util/useSettings';
 
 import { Button } from '@src/components/Button';
+import { DotLoading } from '@src/components/DotLoading';
 import { LoadingIcon } from '@src/components/LoadingIcon';
 import { FormError } from '@src/options/components/FormError';
-import { ILink } from '@src/util/useLinks';
+import { ILink } from '@src/util/atom';
 import QRModal from './QRModal';
 
 export const NewShortURL = ({
   links,
   refetch,
+  isLoading,
 }: {
   links: ILink[];
   refetch: () => Promise<void>;
+  isLoading: boolean;
 }) => {
   const [editLink, setEditLink] = useState<ILink | null>();
   const [isLoging, setIsLoging] = useState(false);
@@ -131,13 +134,15 @@ export const NewShortURL = ({
         />
         <div className='flex-1'>
           <div className='flex items-center justify-start overflow-hidden'>
-            <div className='mr-[2px] truncate text-base font-bold leading-5'>
+            <div className='mr-[2px] truncate text-base font-bold leading-5 relative overflow-visible'>
               {`${instanceUrl}/`}
             </div>
+            {isLoading && <DotLoading className='w-0 overflow-visible' />}
             <input
               value={key}
               onInput={handleKeyChange}
-              placeholder='[Short Key]'
+              disabled={isLoading}
+              placeholder={isLoading ? '' : '[Short Key]'}
               className='flex-1 border-b border-b-gray-200 p-0 text-base shadow-sm focus:border-gray-400 focus:outline-none focus:ring-gray-400'
             />
             {copied ? (

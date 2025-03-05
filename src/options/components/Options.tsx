@@ -12,12 +12,14 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { linksAtom, optionLoginModalAtom } from '../../util/atom';
 import { Links } from './Links';
 import { Footer } from '@src/components/Footer';
+import { LoadingIcon } from '@src/components/LoadingIcon';
+import { useLinks } from '@src/util/useLinks';
 
 const Options = () => {
   const [isHidden, setHidden] = useAtom(optionLoginModalAtom);
   const links = useAtomValue(linksAtom);
   const [instanceUrl, setInstanceUrl] = useState<string | undefined>(undefined);
-
+  const { isRefreshing } = useLinks();
   useEffect(() => {
     if (!isHidden) {
     }
@@ -44,6 +46,8 @@ const Options = () => {
         <h2 className='flex items-center justify-start gap-4 text-center text-2xl font-bold'>
           <Logo />
           Links
+      {isRefreshing && <LoadingIcon  />}
+
           {links && (
             <div className='ml-auto flex items-center'>
               {instanceUrl && (

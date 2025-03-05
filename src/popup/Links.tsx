@@ -1,6 +1,8 @@
+import { LoadingIcon } from '@src/components/LoadingIcon';
 import { SplitLine } from '@src/components/SplitLine';
 import { copyToClipboard, debounce } from '@src/util';
 import { linksAtom } from '@src/util/atom';
+import { useLinks } from '@src/util/useLinks';
 import { useSettings } from '@src/util/useSettings';
 import { useAtomValue } from 'jotai';
 import { useState } from 'preact/hooks';
@@ -10,12 +12,14 @@ export const Links = () => {
   const { instanceUrl } = useSettings();
   const [text, setText] = useState('');
   const [sort, setSort] = useState('CREATE');
+  const { isRefreshing } = useLinks();
 
   if (!links) return null;
   return (
     <div>
       <SplitLine />
       <div className='mb-3 flex items-center gap-2'>
+        {isRefreshing && <LoadingIcon />}
         <select
           value={sort}
           onChange={e => setSort(e.currentTarget.value)}
