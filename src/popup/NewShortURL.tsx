@@ -40,6 +40,8 @@ export const NewShortURL = ({
   const isEdit = editLink?.slug === key;
   const avatarUrl = useAvatar(url);
   const qrModalRef = useRef<QRModalRef>(null);
+  const linksRef = useRef<ILink[]>(links);
+  linksRef.current = links;
 
   const warning = links.filter(
     link => link.url === url && url !== editLink?.url
@@ -66,8 +68,14 @@ export const NewShortURL = ({
       chrome.storage.local.get(['pendingUrl'], result => {
         if (result.pendingUrl) {
           setUrl(result.pendingUrl as string);
+          const theLink = linksRef.current.find(link => link.url === url);
+          if (theLink) {
+            setKey(theLink.slug);
+          } else {
+            setKey('');
+          }
           setTimeout(() => {
-            chrome.storage.local.remove(['pendingUrl'], () => {});
+            chrome.storage.local.remove(['pendingUrl', 'pendingKey'], () => {});
           }, 1000);
         }
       });
@@ -78,14 +86,23 @@ export const NewShortURL = ({
         console.log('result', result);
         if (result.pendingUrl) {
           setUrl(result.pendingUrl as string);
+          const theLink = linksRef.current.find(link => link.url === url);
+          if (theLink) {
+            setKey(theLink.slug);
+          } else {
+            setKey('');
+          }
           setTimeout(() => {
             chrome.storage.local.remove(['pendingUrl'], () => {});
           }, 1000);
         } else if (tab?.url) {
           setUrl(tab.url);
-          const theLink = links.find(link => link.url === tab.url);
-          setEditLink(theLink);
-          theLink && setKey(theLink.slug);
+          const theLink = linksRef.current.find(link => link.url === url);
+          if (theLink) {
+            setKey(theLink.slug);
+          } else {
+            setKey('');
+          }
         }
       });
     });
@@ -272,7 +289,7 @@ export const NewShortURL = ({
       <Button
         className='mt-3 w-full'
         loading={isLoging}
-        disabled={editLink?.slug === key && editLink.url === url}
+        disabled={editLink?.slug === key && editLink.url === url || isLoadSlug}
         onClick={e => (key ? handleSubmit() : handleAutoGenerate())}
       >
         {isEdit ? 'Edit' : 'Add'}
