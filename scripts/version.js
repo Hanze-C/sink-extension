@@ -11,7 +11,8 @@ const rootDir = path.join(__dirname, '..');
 
 function getLatestTag() {
   try {
-    return execSync('git describe --tags --abbrev=0').toString().trim();
+    const tag = execSync('git describe --tags --abbrev=0').toString().trim();
+    return tag === '' ? '0.0.0' : tag;
   } catch (error) {
     return '0.0.0';
   }
@@ -19,7 +20,10 @@ function getLatestTag() {
 
 function getCommitsSinceTag(tag) {
   const format = '%s|%h|%an|%at';
-  const command = `git log ${tag}..HEAD --pretty=format:"${format}"`;
+  const command = tag === '0.0.0' 
+    ? `git log --pretty=format:"${format}"`
+    : `git log ${tag}..HEAD --pretty=format:"${format}"`;
+
   try {
     return execSync(command)
       .toString()
@@ -131,6 +135,10 @@ function main() {
   console.log('✅ Git tag created');
   console.log('\nRun following commands to push changes:');
   console.log(`git push && git push origin v${newVersion}`);
+
+  if (currentTag === '0.0.0') {
+    console.log('ℹ️ No existing tags found, creating initial release');
+  }
 }
 
 main(); 
