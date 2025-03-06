@@ -12,7 +12,10 @@
     "dev": "nodemon",
     "test": "jest",
     "test:cov": "jest --coverage",
-    "format": "prettier src/ scripts/ --write"
+    "format": "prettier src/ scripts/ --write",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major"
   },
   "type": "module",
   "packageManager": "pnpm@9.1.1",
