@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import readline from 'readline';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,7 +100,55 @@ function updateVersion(type = 'patch') {
   return newVersion;
 }
 
-function main() {
+function createPackages(newVersion) {
+  console.log('📦 Creating release packages...');
+  try {
+    const distDir = path.join(rootDir, 'dist');
+    if (!fs.existsSync(distDir)) {
+      fs.mkdirSync(distDir, { recursive: true });
+    }
+
+    // Create ZIP package
+    execSync(`cd ${rootDir} && zip -r dist/sink-extension-v${newVersion}.zip . -x "node_modules/*" -x ".git/*" -x "dist/*"`);
+    console.log(`✅ ZIP package created: dist/sink-extension-v${newVersion}.zip`);
+
+    // Create CRX package (assuming you have the Chrome extension tools installed)
+    try {
+      execSync(`cd ${rootDir} && crx pack -o dist/sink-extension-v${newVersion}.crx .`);
+      console.log(`✅ CRX package created: dist/sink-extension-v${newVersion}.crx`);
+    } catch (error) {
+      console.log('⚠️ CRX package creation failed. Make sure you have the Chrome extension tools installed.');
+    }
+  } catch (error) {
+    console.error('❌ Package creation failed:', error.message);
+  }
+}
+
+function stageChanges(newVersion) {
+  try {
+    // Stage all files including the new packages
+    execSync(`git add --all`);
+    console.log('✅ All changes staged');
+  } catch (error) {
+    console.error('❌ Failed to stage changes:', error.message);
+  }
+}
+
+function promptUser(question) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise(resolve => {
+    rl.question(question, answer => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
+
+async function main() {
   const versionType = process.argv[2] || 'patch';
   if (!['major', 'minor', 'patch'].includes(versionType)) {
     console.error('Version type must be: major, minor, or patch');
@@ -113,7 +162,7 @@ function main() {
   const date = new Date().toISOString().split('T')[0];
   const changelog = `# ${newVersion} (${date})\n\n${generateChangelog(commits)}`;
   
-  // 更新 CHANGELOG.md
+  // Update CHANGELOG.md
   const changelogPath = path.join(rootDir, 'CHANGELOG.md');
   const existingChangelog = fs.existsSync(changelogPath) 
     ? fs.readFileSync(changelogPath, 'utf8')
@@ -126,18 +175,29 @@ function main() {
   
   console.log(`✅ Version updated to ${newVersion}`);
   console.log('✅ CHANGELOG.md updated');
+
+  // Ask for confirmation before packaging
+  const answer = await promptUser('Do you want to create release packages? (y/n): ');
   
-  // 创建 git tag
+  // Create git tag
   execSync(`git add package.json CHANGELOG.md`);
-  execSync(`git commit -m "chore: release ${newVersion}"`);
-  execSync(`git tag -a v${newVersion} -m "Release ${newVersion}"`);
   
-  console.log('✅ Git tag created');
-  console.log('\nRun following commands to push changes:');
-  console.log(`git push && git push origin v${newVersion}`);
+  if (answer.toLowerCase() === 'y') {
+    createPackages(newVersion);
+    stageChanges(newVersion);
+    
+    console.log('\n📋 Summary of changes:');
+    console.log(`- Version updated to ${newVersion}`);
+    console.log('- CHANGELOG.md updated');
+    console.log('- Release packages created');
+    console.log('- All changes staged');
+    console.log('\n✨ Ready for manual commit and push');
+  } else {
+    console.log('⏭️ Skipping package creation. Changes to package.json and CHANGELOG.md are staged.');
+  }
 
   if (currentTag === '0.0.0') {
-    console.log('ℹ️ No existing tags found, creating initial release');
+    console.log('ℹ️ No existing tags found. This is the initial release.');
   }
 }
 
