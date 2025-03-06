@@ -12,7 +12,7 @@ const manifest: ManifestType = {
     default_popup: 'src/popup/index.html',
     default_icon: 'icon32.png',
   },
-  permissions: ['storage', 'tabs'],
+  permissions: ['storage', 'tabs', 'contextMenus'],
   icons: {
     '16': 'icon16.png',
     '32': 'icon32.png',

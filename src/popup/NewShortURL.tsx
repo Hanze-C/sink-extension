@@ -62,15 +62,32 @@ export const NewShortURL = ({
   }, [key, url]);
 
   useEffect(() => {
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      chrome.storage.local.get(['pendingUrl'], result => {
+        if (result.pendingUrl) {
+          setUrl(result.pendingUrl as string);
+          setTimeout(() => {
+            chrome.storage.local.remove(['pendingUrl'], () => {});
+          }, 1000);
+        }
+      });
+    });
+
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.url) {
-        try {
+      chrome.storage.local.get(['pendingUrl'], result => {
+        console.log('result', result);
+        if (result.pendingUrl) {
+          setUrl(result.pendingUrl as string);
+          setTimeout(() => {
+            chrome.storage.local.remove(['pendingUrl'], () => {});
+          }, 1000);
+        } else if (tab?.url) {
           setUrl(tab.url);
           const theLink = links.find(link => link.url === tab.url);
           setEditLink(theLink);
           theLink && setKey(theLink.slug);
-        } catch {}
-      }
+        }
+      });
     });
   }, []);
 
@@ -167,7 +184,11 @@ export const NewShortURL = ({
               <span style={{ fontWeight: 'bold', color: 'blue' }}>
                 {instanceUrl}/
               </span>
-              <span style={{ fontWeight: 'bold', color: 'red', marginLeft: '2px' }}>{key}</span>
+              <span
+                style={{ fontWeight: 'bold', color: 'red', marginLeft: '2px' }}
+              >
+                {key}
+              </span>
             </p>
             <div className='flex justify-end gap-2'>
               <button
