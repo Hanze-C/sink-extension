@@ -46,6 +46,15 @@ jobs:
       - name: Zip sink-tool folder
         run: zip -r sink-tool.zip sink-tool
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # 从最近的changelog条目中提取发布说明
+          RELEASE_NOTES=$(awk '/^# [0-9]+\.[0-9]+\.[0-9]+/,/(^# [0-9]+\.[0-9]+\.[0-9]+|$)/' CHANGELOG.md | head -n -1)
+          # 将release notes保存到文件
+          echo "$RELEASE_NOTES" > release_notes.md
+          echo "::set-output name=notes_path::release_notes.md"
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1

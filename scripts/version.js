@@ -100,37 +100,31 @@ function updateVersion(type = 'patch') {
   return newVersion;
 }
 
-function createPackages(newVersion) {
-  console.log('📦 Creating release packages...');
+function stageChanges() {
   try {
-    const distDir = path.join(rootDir, 'dist');
-    if (!fs.existsSync(distDir)) {
-      fs.mkdirSync(distDir, { recursive: true });
-    }
-
-    // Create ZIP package
-    execSync(`cd ${rootDir} && zip -r dist/sink-extension-v${newVersion}.zip . -x "node_modules/*" -x ".git/*" -x "dist/*"`);
-    console.log(`✅ ZIP package created: dist/sink-extension-v${newVersion}.zip`);
-
-    // Create CRX package (assuming you have the Chrome extension tools installed)
-    try {
-      execSync(`cd ${rootDir} && crx pack -o dist/sink-extension-v${newVersion}.crx .`);
-      console.log(`✅ CRX package created: dist/sink-extension-v${newVersion}.crx`);
-    } catch (error) {
-      console.log('⚠️ CRX package creation failed. Make sure you have the Chrome extension tools installed.');
-    }
+    execSync(`git add package.json CHANGELOG.md`);
+    console.log('✅ Changes staged (package.json, CHANGELOG.md)');
+    return true;
   } catch (error) {
-    console.error('❌ Package creation failed:', error.message);
+    console.error('❌ Failed to stage changes:', error.message);
+    return false;
   }
 }
 
-function stageChanges(newVersion) {
+function createAndPushTag(newVersion) {
   try {
-    // Stage all files including the new packages
-    execSync(`git add --all`);
-    console.log('✅ All changes staged');
+    // Create tag
+    execSync(`git tag -a v${newVersion} -m "Release v${newVersion}"`);
+    console.log(`✅ Tag v${newVersion} created`);
+    
+    // Push tag
+    execSync(`git push origin v${newVersion}`);
+    console.log(`✅ Tag v${newVersion} pushed to origin`);
+    
+    return true;
   } catch (error) {
-    console.error('❌ Failed to stage changes:', error.message);
+    console.error('❌ Failed to create or push tag:', error.message);
+    return false;
   }
 }
 
@@ -175,29 +169,63 @@ async function main() {
   
   console.log(`✅ Version updated to ${newVersion}`);
   console.log('✅ CHANGELOG.md updated');
-
-  // Ask for confirmation before packaging
-  const answer = await promptUser('Do you want to create release packages? (y/n): ');
   
-  // Create git tag
-  execSync(`git add package.json CHANGELOG.md`);
+  // Preview changelog for user
+  console.log('\n📝 Generated changelog:');
+  console.log('------------------------');
+  console.log(changelog.split('\n').slice(0, 10).join('\n') + (changelog.split('\n').length > 10 ? '\n...(truncated)' : ''));
+  console.log('------------------------');
   
-  if (answer.toLowerCase() === 'y') {
-    createPackages(newVersion);
-    stageChanges(newVersion);
-    
-    console.log('\n📋 Summary of changes:');
-    console.log(`- Version updated to ${newVersion}`);
-    console.log('- CHANGELOG.md updated');
-    console.log('- Release packages created');
-    console.log('- All changes staged');
-    console.log('\n✨ Ready for manual commit and push');
+  // Ask for confirmation before staging
+  const stageAnswer = await promptUser('\nDo you want to stage these changes? (y/n): ');
+  
+  if (stageAnswer.toLowerCase() !== 'y') {
+    console.log('⏭️ Changes not staged. You can review and stage them manually.');
+    process.exit(0);
+  }
+  
+  // Stage changes
+  if (!stageChanges()) {
+    process.exit(1);
+  }
+  
+  console.log('\n📋 Summary of changes:');
+  console.log(`- Version updated to ${newVersion}`);
+  console.log('- CHANGELOG.md updated');
+  console.log('- All changes staged for commit');
+  
+  // Ask if user wants to proceed with committing and tagging
+  const commitMsg = `chore: release ${newVersion}`;
+  console.log(`\nReady to commit with message: "${commitMsg}"`);
+  const commitAnswer = await promptUser('Do you want to commit these changes and create a tag? (y/n): ');
+  
+  if (commitAnswer.toLowerCase() === 'y') {
+    try {
+      // Commit changes
+      execSync(`git commit -m "${commitMsg}"`);
+      console.log('✅ Changes committed');
+      
+      // Ask for final confirmation before creating and pushing tag
+      console.log(`\nThis will create and push tag v${newVersion}, triggering the release workflow.`);
+      const tagAnswer = await promptUser('Continue? (y/n): ');
+      
+      if (tagAnswer.toLowerCase() === 'y') {
+        if (createAndPushTag(newVersion)) {
+          console.log('\n🚀 Release process completed!');
+          console.log('GitHub Actions will now build and create the release.');
+        }
+      } else {
+        console.log('⏭️ Tag creation skipped. Changes are committed but not tagged.');
+      }
+    } catch (error) {
+      console.error('❌ Commit failed:', error.message);
+    }
   } else {
-    console.log('⏭️ Skipping package creation. Changes to package.json and CHANGELOG.md are staged.');
+    console.log('⏭️ Commit skipped. Changes are staged and ready for manual commit.');
   }
 
   if (currentTag === '0.0.0') {
-    console.log('ℹ️ No existing tags found. This is the initial release.');
+    console.log('\nℹ️ No existing tags found. This is the initial release.');
   }
 }
 
